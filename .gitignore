@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.rda
+src/*.o
+src/*.so
+src/*.dll
+docs/*.rda
+docs/*.rdb
+solcap_example_cache/
+solcap_example_files/
+polymapR_example_cache/
+polymapR_example_files/

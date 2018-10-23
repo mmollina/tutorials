@@ -11,7 +11,7 @@ all.pairs<-est_pairwise_rf(input.seq = s,
                            count.cache = counts.web,
                            n.clusters = 8,
                            verbose=TRUE)
-mat.full<-rf_list_to_matrix(input.twopt=all.pairs, n.clusters = 5)
+mat.full<-rf_list_to_matrix(input.twopt=all.pairs)
 lgs<-group_mappoly(input.mat = mat.full,
                    input.seq = s,
                    expected.groups = 12,
@@ -27,7 +27,6 @@ P.filt<-lapply(LGS.filt, make_pairs_mappoly, input.twopt = all.pairs)
 M.filt<-lapply(P.filt, rf_list_to_matrix)
 MDS.ord<-lapply(M.filt, mds_mappoly)
 MDS.seq<-lapply(MDS.ord, make_seq_mappoly)
-
 op <- par(mfrow = c(2, 3), pty = "s")
 for(i in 1:5)
   plot(M.filt[[i]], ord = MDS.seq[[i]]$seq.mrk.names, 
@@ -80,32 +79,42 @@ system.time(
   }
 )
 
-a<-phased.maplist$LG4[,1:2]
+
+i<-2
+a<-phased.maplist[[id[i]]][,1:2]
 b<-data.frame(marker = tetra.data$mrk.names[MAPS[[i]]$maps[[1]]$seq.num],
               position = cumsum(imf_h(c(0, MAPS[[i]]$maps[[1]]$seq.rf))))
 head(a);head(b)
+
+
+
 plot(match(a$marker, b$marker))
-
-
 s.comp1<-make_seq_mappoly(tetra.data, arg = intersect(a$marker, b$marker))
 s.comp2<-make_seq_mappoly(tetra.data, arg = intersect(b$marker, a$marker))
 match(s.comp1$seq.num, s.comp2$seq.num)
-
-
-oa<-match(s.comp1$seq.num, MAPs.res$maps[[1]]$seq.num)
-ob<-match(s.comp2$seq.num, MAPs.res$maps[[1]]$seq.num)
-ares<-get_submap(MAPs.res[[1]], mrk.pos = oa, reestimate.rf = TRUE)
-bres<-get_submap(MAPs.res[[1]], mrk.pos = ob, reestimate.rf = TRUE)
+oa<-match(s.comp1$seq.num, MAPs.res[[i]]$maps[[1]]$seq.num)
+ob<-match(s.comp2$seq.num, MAPs.res[[i]]$maps[[1]]$seq.num)
+ares<-get_submap(MAPs.res[[i]], mrk.pos = oa, reestimate.rf = TRUE, verbose = FALSE)
+bres<-get_submap(MAPs.res[[i]], mrk.pos = ob, reestimate.rf = TRUE, verbose = FALSE)
 ares; bres
-
 areserr<-est_full_hmm_with_global_error(ares, error = 0.05, tol = 10e-4)
 breserr<-est_full_hmm_with_global_error(bres, error = 0.05, tol = 10e-4)
 areserr; breserr
 
+
+
+plot(0, type = "n", xlim=c(0,max(c(a$position, b$position))))
+for(j in a$marker)
+  
+  a[j,]
+
+a$
+  
+
 plot(MAPs.res[[1]], col.cte = pal[[1]])
 
 
-
+save.image(file = "~/repos/tutorials/polymapR_example/mapping_for_polymapR_example.rda", compress = TRUE)
 
 
  

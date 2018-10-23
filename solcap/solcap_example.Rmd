@@ -1,0 +1,349 @@
+---
+title: Building a genetic map using SolCAP data (codes with minimal comments)
+author: "Marcelo Mollinari"
+date: "`r Sys.Date()`"
+output:
+ html_document:
+   highlight: tango
+   keep_md: yes
+   theme: united
+   toc: yes
+   toc_float:
+     collapsed: no
+ md_document:
+   variant: markdown_github
+ pdf_document:
+   toc: yes
+   toc_depth: '3'
+   highlight: tango
+linestretch: 1.2
+#bibliography: biblio.bib
+#output: rmarkdown::html_vignette
+#vignette: >
+#  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+#load("~/repos/tutorials/solcap")
+require(ggplot2)
+```
+
+# Context
+
+The Solanaceae Coordinated Agricultural Project (SolCAP) consitium provides sequences and SNPs used in the SolCAP 8300 Infinium Chip in their [website](http://solcap.msu.edu/potato_infinium.shtml). Here, we will use the first 4x mapping population in Coded Potato Infinium GenomeStudio Project data set. 
+
+# Genotype calling using ClusterCall 
+
+NOTE: Here, we use the marker dosage with no associated probability distribution. 
+
+```{r, eval = FALSE}
+require(ClusterCall)
+require(mappoly)
+setwd("~/repos/tutorials/solcap/")
+datxy<-read.table(file = "~/repos/tutorials/solcap/potato_x_y_solcap_public.txt", header=TRUE)
+datxy[1:10,1:10]
+colnames(datxy)
+X<-grep(pattern = ".X", colnames(datxy))
+Y<-grep(pattern = ".Y", colnames(datxy))
+datx<-datxy[,X]
+daty<-datxy[,Y]
+
+Px<-apply(datx[,1:2], 1, sum)
+Py<-apply(daty[,1:2], 1, sum)
+Qx<-apply(datx[,3:4], 1, sum)
+Qy<-apply(daty[,3:4], 1, sum)
+
+raw2theta<-function(x,y)
+  2*atan(y/x)/pi
+
+raw2r<-function(x,y)
+  sqrt(x^2 + y^2)
+
+## Theta
+dat.theta<-matrix(NA, nrow(datx), ncol(datx)-2)
+dat.theta[,1]<-raw2theta(Px, Py)
+dat.theta[,2]<-raw2theta(Qx, Qy)
+for(i in 5:ncol(datx))
+{
+  dat.theta[,i-2]<-raw2theta(datx[,i], daty[,i])
+}
+dimnames(dat.theta)<-list(as.character(datxy[,1]), c("P1", "P2", unlist(strsplit(colnames(datx), ".X")[-c(1:4)])))
+dim(dat.theta)
+dat.theta[1:10, 1:10]
+write.csv(x = dat.theta, file = "~/repos/tutorials/solcap/solcap_public_theta.csv")
+
+## r
+dat.r<-matrix(NA, nrow(datx), ncol(datx)-2)
+dat.r[,1]<-raw2r(Px, Py)
+dat.r[,2]<-raw2r(Qx, Qy)
+for(i in 5:ncol(datx))
+{
+  dat.r[,i-2]<-raw2r(datx[,i], daty[,i])
+}
+dim(dat.r)
+dimnames(dat.r)<-list(as.character(datxy[,1]), c("P1", "P2", unlist(strsplit(colnames(datx), ".X")[-c(1:4)])))
+write.csv(x = dat.r, file = "~/repos/tutorials/solcap/solcap_public_r.csv")
+
+###Running ClusterCall
+ab <- read.pop(theta.file = "solcap_public_theta.csv", r.file = "solcap_public_r.csv")
+AB <- CC.bipop(ab, parent1 = "P1", parent2 = "P2", n.core = 16)
+mrks<-rownames(ab@theta)
+i<-1
+inspect.marker(AB, mrks[i])
+inspect.marker(AB, "solcap_snp_c2_36691")
+inspect.marker(AB, "solcap_snp_c2_36686")
+
+abline(h = by(data = AB@theta[mrks[i], ], INDICES = AB@geno[mrks[i], ], mean),
+       lty = 2, lwd = 0.5, col = 2)
+dev.off()
+
+## Genomic infomation
+blast <- read.csv(file="~/repos/potato_analysis_to_publish/blast_solcap.out", header=TRUE)
+## selecting the best hits
+blast <-blast[!duplicated(blast$query.id),]
+dim(blast)
+head(blast)
+## filter the markers based on the identity ( > 95.5)
+blast$snp.pos<-blast$s..start+ceiling((blast$s..start - blast$s..end)/2)
+plot(sort(blast$"X..identity"), xlab = "SNP", ylab = "Identity")
+abline(h=95.5)
+dev.off()
+## percentage discarded
+100*sum(blast$"X..identity" < 95.5)/nrow(blast)
+blast<-blast[blast$"X..identity"> 95.5,]
+## Creating a list with all SNPs allocated in the 12 potato
+## chromossomes and their positions
+chrnames<-sort(as.character(unique(blast$subject.id)))
+chr<-vector("list", length(chrnames))
+names(chr)<-chrnames
+## Attributing chromosomes and positions to SNPs
+for(i in chrnames){
+  #i<-"chr01"
+  temp<-subset(blast, subject.id == i)
+  chr[[i]]<-temp[order(temp$snp.pos),c("query.id", "snp.pos")]
+}
+sum(unlist(sapply(chr, nrow))[1:12])
+nrow(blast)
+## allowed percentage of double reduction
+dr.limit <- 5
+## allowed percentage of missing data
+miss.limit <- 10
+pos<-ch<-nm<-geno<-NULL
+for(k in 1:length(chr))
+{
+  cat("\n Chromosome ", k, " :", sep="")
+  for(j in 1:nrow(chr[[k]]))
+  {
+    i<-as.character(chr[[k]]$query.id[j])
+    if(sum(AB@info$marker%in%i) != 1)
+      next()
+    new.name<-paste(i, names(chr[k]), round(chr[[k]]$snp.pos[j]/1000000,2), sep="_")
+    parent.dose<-c(AB@geno[i,AB@parent1], AB@geno[i,AB@parent2])
+     if(any(is.na(parent.dose)))
+    {
+      #print(i)
+      next()
+    }
+    if(all(parent.dose==c(4,0)) | all(parent.dose==c(0,4)) | all(parent.dose==c(0,0)) | all(parent.dose==c(4,4)))
+      next()
+    #print(parent.dose)
+    if(length(table(AB@geno[i,])) ==1)
+      next()
+    g<-which(segreg_poly(m = 4, AB@geno[i,AB@parent1], AB@geno[i,AB@parent2]) > 0) - 1
+    dr<-!AB@geno[i, -c(1:2)]%in%g
+    ## if the number os individuals with double reduction
+    ## is bigger than the threshold, discard the marker
+    if(sum(dr) > ceiling(dr.limit * (ncol(ab@theta) - 2)/100))
+      next()
+    ## eliminating markers with more missing data than the allowed threshold
+    if(sum(is.na(AB@geno[i, -c(1:2)])) >  ceiling(miss.limit * (ncol(ab@theta) - 2)/100))
+      next()
+    if(sum(dr) != 0)
+      AB@geno[i, c(FALSE, FALSE, dr)]<-NA
+    #inspect.marker(AB, i)
+    #abline(h = by(data = AB@theta[i, ], INDICES = AB@geno[i, ], mean),
+    #       lty = 2, lwd = 0.5, col = 2)
+    p<-segreg_poly(m = 4, dP = AB@geno[i,1], dQ = AB@geno[i,2])
+    v2<-rep(0,5)
+    names(v2)<-names(p)<-0:4
+    v<-table(AB@geno[i,])
+    v2[names(v)]<-v
+    test<-chisq.test(v2[p!=0],  p = p[p!=0])
+    if(test$p.value < 0.05)
+      next()
+    nm<-c(nm, new.name)
+    #geno.temp<-AB@geno[i,]#-c(1:2)]
+    #geno.temp[!geno.temp%in%names(p)[p!=0]]<-NA
+    geno<-rbind(geno, AB@geno[i,])
+    ch<-c(ch, k)
+    pos<-c(pos, chr[[k]]$snp.pos[j])
+    #cat(".")
+  }
+}
+rownames(geno)<-nm
+dim(geno)
+colnames(geno)[-c(1:2)]<-sapply(strsplit(x = colnames(geno), split = "X4x_population1"), function(x) paste0("ind", x[2]))[-c(1:2)]
+geno[1:10, 1:10]
+## ClusterCall to polymap2
+indnames<-colnames(geno)[-c(1:2)]
+mrknames<-rownames(geno)
+write(paste("ploidy", 4), file="potato_solcap")
+write(paste("nind", length(indnames)), file="potato_solcap", append=TRUE)
+write(paste("nmrk", nrow(geno)), file="potato_solcap", append=TRUE)
+cat("mrknames", mrknames, file="potato_solcap", append=TRUE)
+cat("\nindnames", indnames, file="potato_solcap", append=TRUE)
+cat("\ndosageP", geno[,AB@parent1], file="potato_solcap", append=TRUE)
+cat("\ndosageQ", geno[,AB@parent2], file="potato_solcap", append=TRUE)
+cat("\nseq", ch, file="potato_solcap", append=TRUE)
+cat("\nseqpos", pos, file="potato_solcap", append=TRUE)
+write("\nnphen 0", file="potato_solcap", append=TRUE)
+write("pheno---------------------------------------", file="potato_solcap", append=TRUE)
+write("geno---------------------------------------", file="potato_solcap", append=TRUE)
+dose_to_dist<-function(x, m=4, p, q)
+{
+  if(is.na(x))
+    return(segreg_poly(m, dP = p, dQ = q))
+  y<-numeric(m+1)
+  y[x+1]<-1
+  return(y)
+}
+geno.out<-NULL
+for(i in 1:length(indnames))
+{
+  a<-t(mapply(dose_to_dist, geno[,i+2], m=4, p=geno[,AB@parent1], q=geno[,AB@parent2]))
+  colnames(a)<-NULL
+  geno.out<-rbind(geno.out, data.frame(rownames(a), indnames[i], a))
+}
+write.table(geno.out, file="potato_solcap", append=TRUE, quote=FALSE,
+            row.names=FALSE, col.names=FALSE)
+
+```
+
+# Map construction 
+
+## Reading data set
+
+```{r load_mappoly}
+require(mappoly)
+solcap.dat<-read_geno_dist(file.in = "~/repos/tutorials/solcap/potato_solcap")
+solcap.dat
+```
+
+Summary 
+
+```{r dataset}
+print(solcap.dat, detailed = TRUE)
+plot(solcap.dat)
+```
+
+### Recombination fraction estimation
+
+Now, let us compute the recombination fraction between all markers in the data set. 
+
+```{r rf_estimation, eval=TRUE}
+s<-make_seq_mappoly(solcap.dat, arg = "all")
+counts.web<-cache_counts_twopt(s, get.from.web = TRUE)
+all.pairs<-est_pairwise_rf(input.seq = s,
+                           count.cache = counts.web,
+                           n.clusters = 16, #toke approx. 9 minutes using 24 CPUs in BRC cluster
+                           verbose=TRUE) 
+mat.full<-rf_list_to_matrix(input.twopt=all.pairs)
+mat.full
+plot(mat.full)
+```
+
+### Grouping
+
+```{r grouping, warning=FALSE}
+lgs<-group_mappoly(input.mat = mat.full,
+                   input.seq = s,
+                   expected.groups = 13,
+                   comp.mat = TRUE, 
+                   inter = FALSE)
+print(lgs, detailed = TRUE)
+plot(lgs)
+## Selecting groups
+LGS<-lapply(c(1:12), function(x, lgs) make_seq_mappoly(lgs, x), lgs)
+```
+
+### Filtering and ordering markers within groups
+
+```{r mds, echo=FALSE, eval=TRUE}
+P<-lapply(LGS, make_pairs_mappoly, input.twopt = all.pairs)
+LGS.filt<-lapply(P, rf_snp_filter, thresh.LOD.ph = 5, 
+                 thresh.LOD.rf = 5, thresh.rf = 0.15, 
+                 thresh.perc = 0.10)
+P.filt<-lapply(LGS.filt, make_pairs_mappoly, input.twopt = all.pairs)
+M.filt<-lapply(P.filt, rf_list_to_matrix)
+cl <- parallel::makeCluster(12)
+parallel::clusterEvalQ(cl, require(mappoly))
+MDS.ord <- parallel::parLapply(cl,
+                               M.filt,
+                               mds_mappoly)
+parallel::stopCluster(cl)
+MDS.seq<-lapply(MDS.ord, make_seq_mappoly)
+```
+
+Now, let us plot the reordered recombination fraction 
+```{r mds_plot}
+op <- par(mfrow = c(3, 4), pty = "s")
+for(i in 1:12)
+  plot(M.filt[[i]], ord = MDS.seq[[i]]$seq.mrk.names, 
+       main.text = paste0("LG", i), index = FALSE)
+par(op)
+```
+
+Now, the full recombination fraction matrix
+```{r full_rf_mat, fig.width=10, fig.height=10}
+o<-unlist(sapply(MDS.seq, function(x) x$seq.mrk.names))
+plot(mat.full, ord = o)
+```
+
+### Phasing and multilocus reconstruction
+
+Given the MDS order, we estimate the phase and the recombination fraction between all adjacent markers. After that, we reestimate the map using the function `est_full_hmm_with_global_error`, which includes a global genotype error in the HMM model.
+
+```{r phasing_and_reestimate, eval=TRUE}
+## function for parallel computation
+my.phase.func<-function(X)
+{
+  return(est_rf_hmm_sequential(input.seq = X[[1]],
+                               thres.twopt = 10,
+                               thres.hmm = 10,
+                               extend.tail = 20,
+                               twopt = X[[2]],
+                               verbose = TRUE,
+                               tol = 10e-3,
+                               tol.final = 10e-4,
+                               phase.number.limit = 40,
+                               sub.map.size.diff.limit = 10,
+                               info.tail = TRUE,
+                               reestimate.single.ph.configuration = TRUE, 
+                               high.prec = FALSE))
+  
+}
+## list with ordered sequences and pairwise recombination fractions
+X<-vector("list", 12)
+for(i in 1:12)
+  X[[i]]<-list(MDS.seq[[i]], P.filt[[i]])
+
+## Running phasing algorithm in 5 CPUs
+system.time({
+  cl <- parallel::makeCluster(12)
+  parallel::clusterEvalQ(cl, require(mappoly))
+  parallel::clusterExport(cl, "solcap.dat")
+  MAPS <- parallel::parLapply(cl,X,my.phase.func)
+  MAPs.res <- parallel::parLapply(cl, MAPS, est_full_hmm_with_global_error, 
+                                  error = 0.05, tol = 10e-4)
+  parallel::stopCluster(cl)
+})
+MAPs.res
+sapply(MAPs.res, plot)
+```
+
+```{r, save_chunk, echo=FALSE, include=FALSE, eval=FALSE}
+save.image(file = "~/repos/tutorials/solcap/solcap_res.rda", compress = TRUE)
+```
+
