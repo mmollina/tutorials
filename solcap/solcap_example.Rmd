@@ -312,13 +312,13 @@ my.phase.func<-function(X)
   return(est_rf_hmm_sequential(input.seq = X[[1]],
                                thres.twopt = 10,
                                thres.hmm = 10,
-                               extend.tail = 20,
+                               extend.tail = 50,
                                twopt = X[[2]],
                                verbose = TRUE,
                                tol = 10e-3,
                                tol.final = 10e-4,
                                phase.number.limit = 40,
-                               sub.map.size.diff.limit = 10,
+                               sub.map.size.diff.limit = 6,
                                info.tail = TRUE,
                                reestimate.single.ph.configuration = TRUE, 
                                high.prec = FALSE))
@@ -329,7 +329,7 @@ X<-vector("list", 12)
 for(i in 1:12)
   X[[i]]<-list(MDS.seq[[i]], P.filt[[i]])
 
-## Running phasing algorithm in 5 CPUs
+## Running phasing algorithm in 12 CPUs
 system.time({
   cl <- parallel::makeCluster(12)
   parallel::clusterEvalQ(cl, require(mappoly))
@@ -342,6 +342,7 @@ system.time({
 MAPs.res
 sapply(MAPs.res, plot)
 ```
+
 
 ```{r, save_chunk, echo=FALSE, include=FALSE, eval=FALSE}
 save.image(file = "~/repos/tutorials/solcap/solcap_res.rda", compress = TRUE)

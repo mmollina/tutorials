@@ -1,5 +1,5 @@
 ---
-title: Building a genetic map using SolCAP data (codes with minimal comments)
+title: Building a genetic map using potato genotype data from SolCAP (with minimal comments)
 author: "Marcelo Mollinari"
 date: "2018-10-23"
 output:
@@ -556,13 +556,13 @@ my.phase.func<-function(X)
   return(est_rf_hmm_sequential(input.seq = X[[1]],
                                thres.twopt = 10,
                                thres.hmm = 10,
-                               extend.tail = 20,
+                               extend.tail = 50,
                                twopt = X[[2]],
                                verbose = TRUE,
                                tol = 10e-3,
                                tol.final = 10e-4,
                                phase.number.limit = 40,
-                               sub.map.size.diff.limit = 10,
+                               sub.map.size.diff.limit = 6,
                                info.tail = TRUE,
                                reestimate.single.ph.configuration = TRUE, 
                                high.prec = FALSE))
@@ -573,7 +573,7 @@ X<-vector("list", 12)
 for(i in 1:12)
   X[[i]]<-list(MDS.seq[[i]], P.filt[[i]])
 
-## Running phasing algorithm in 5 CPUs
+## Running phasing algorithm in 12 CPUs
 system.time({
   cl <- parallel::makeCluster(12)
   parallel::clusterEvalQ(cl, require(mappoly))
@@ -587,7 +587,7 @@ system.time({
 
 ```
 ##     user   system  elapsed 
-##    2.694    2.839 1516.343
+##    2.904    0.637 1579.389
 ```
 
 ```r
@@ -599,15 +599,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 373 
+##     No. markers:	 362 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 168.98
-##        log-likelihood:	 -10036.13
+##        map length:	 155.09
+##        log-likelihood:	 -9682.29
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -615,15 +615,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 250 
+##     No. markers:	 249 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 125.27
-##        log-likelihood:	 -7919.15
+##        map length:	 119.95
+##        log-likelihood:	 -7641.79
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -647,15 +647,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 337 
+##     No. markers:	 377 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 139.58
-##        log-likelihood:	 -9153.41
+##        map length:	 117.98
+##        log-likelihood:	 -9944.5
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -679,15 +679,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 366 
+##     No. markers:	 357 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 102.09
-##        log-likelihood:	 -8189.87
+##        map length:	 95.13
+##        log-likelihood:	 -7983.67
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -711,15 +711,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 257 
+##     No. markers:	 254 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 95.28
-##        log-likelihood:	 -6785.29
+##        map length:	 90.54
+##        log-likelihood:	 -6500.04
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -727,15 +727,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 241 
+##     No. markers:	 238 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 117.01
-##        log-likelihood:	 -7145.71
+##        map length:	 97.18
+##        log-likelihood:	 -6763.53
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -743,15 +743,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 140 
+##     No. markers:	 135 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 109.08
-##        log-likelihood:	 -5358.79
+##        map length:	 107.39
+##        log-likelihood:	 -5152.62
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -759,15 +759,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 251 
+##     No. markers:	 253 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 98.05
-##        log-likelihood:	 -6888.83
+##        map length:	 98.39
+##        log-likelihood:	 -6914.15
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ## 
@@ -775,15 +775,15 @@ MAPs.res
 ## This is an object of class 'mappoly.map'
 ##     Ploidy level:	 4 
 ##     No. individuals:	 160 
-##     No. markers:	 182 
+##     No. markers:	 177 
 ##     No. linkage phases:	 1 
 ## 
 ##     ---------------------------------------------
 ##     Number of linkage phase configurations:  1
 ##     ---------------------------------------------
 ##     Linkage phase configuration:  1
-##        map length:	 91.45
-##        log-likelihood:	 -5982.1
+##        map length:	 89.55
+##        log-likelihood:	 -5590.01
 ##        LOD:		 0
 ##     ~~~~~~~~~~~~~~~~~~
 ```
@@ -808,6 +808,7 @@ sapply(MAPs.res, plot)
 ## name "GRID.VP.33" "GRID.VP.36"
 ## n    1            1
 ```
+
 
 
 
