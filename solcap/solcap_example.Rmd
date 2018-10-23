@@ -1,5 +1,5 @@
 ---
-title: Building a genetic map using SolCAP data (codes with minimal comments)
+title: Building a genetic map using potato genotype data from SolCAP (with minimal comments)
 author: "Marcelo Mollinari"
 date: "`r Sys.Date()`"
 output:
