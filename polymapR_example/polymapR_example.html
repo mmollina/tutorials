@@ -11,7 +11,7 @@
 
 <meta name="author" content="Marcelo Mollinari" />
 
-<meta name="date" content="2018-10-23" />
+<meta name="date" content="2018-10-25" />
 
 <title>Analyzing polymapR’s example using MAPpoly</title>
 
@@ -254,7 +254,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Analyzing polymapR’s example using MAPpoly</h1>
 <h4 class="author"><em>Marcelo Mollinari</em></h4>
-<h4 class="date"><em>2018-10-23</em></h4>
+<h4 class="date"><em>2018-10-25</em></h4>
 
 </div>
 
@@ -408,11 +408,19 @@ LGS&lt;-<span class="kw">lapply</span>(<span class="kw">c</span>(<span class="dv
 <div id="filtering-and-ordering-markers-within-groups" class="section level3">
 <h3>Filtering and ordering markers within groups</h3>
 <p>Next, we use the function <code>rf_snp_filter</code> to remove markers that do not meet a LOD and recombination fraction criteria for at least 10% of the pairwise markers combinations within each linkage group. After that, we obtain the recombination fraction matrices for all groups and use the MDS algorithm to order the markers.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">P&lt;-<span class="kw">lapply</span>(LGS, make_pairs_mappoly, <span class="dt">input.twopt =</span> all.pairs)
+LGS.filt&lt;-<span class="kw">lapply</span>(P, rf_snp_filter, <span class="dt">thresh.LOD.ph =</span> <span class="dv">5</span>, 
+                 <span class="dt">thresh.LOD.rf =</span> <span class="dv">5</span>, <span class="dt">thresh.rf =</span> <span class="fl">0.15</span>, 
+                 <span class="dt">thresh.perc =</span> <span class="fl">0.10</span>)
+P.filt&lt;-<span class="kw">lapply</span>(LGS.filt, make_pairs_mappoly, <span class="dt">input.twopt =</span> all.pairs)
+M.filt&lt;-<span class="kw">lapply</span>(P.filt, rf_list_to_matrix)</code></pre></div>
 <pre><code>## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">cl &lt;-<span class="st"> </span>parallel<span class="op">::</span><span class="kw">makeCluster</span>(<span class="dv">5</span>)
+parallel<span class="op">::</span><span class="kw">clusterEvalQ</span>(cl, <span class="kw">require</span>(mappoly))</code></pre></div>
 <pre><code>## [[1]]
 ## [1] TRUE
 ## 
@@ -427,6 +435,11 @@ LGS&lt;-<span class="kw">lapply</span>(<span class="kw">c</span>(<span class="dv
 ## 
 ## [[5]]
 ## [1] TRUE</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MDS.ord &lt;-<span class="st"> </span>parallel<span class="op">::</span><span class="kw">parLapply</span>(cl,
+                               M.filt,
+                               mds_mappoly)
+parallel<span class="op">::</span><span class="kw">stopCluster</span>(cl)
+MDS.seq&lt;-<span class="kw">lapply</span>(MDS.ord, make_seq_mappoly)</code></pre></div>
 <p>Now, let us plot the reordered recombination fraction</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">op &lt;-<span class="st"> </span><span class="kw">par</span>(<span class="dt">mfrow =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">3</span>), <span class="dt">pty =</span> <span class="st">&quot;s&quot;</span>)
 <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">5</span>)

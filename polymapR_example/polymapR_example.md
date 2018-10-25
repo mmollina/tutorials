@@ -1,7 +1,7 @@
 ---
 title: Analyzing polymapR's example using MAPpoly 
 author: "Marcelo Mollinari"
-date: "2018-10-23"
+date: "2018-10-25"
 output:
  html_document:
    highlight: tango
@@ -261,12 +261,26 @@ LGS<-lapply(c(1,2,4,5,6), function(x, lgs) make_seq_mappoly(lgs, x), lgs)
 Next, we use the function `rf_snp_filter` to remove markers that do not meet a LOD and recombination fraction criteria for at least 10% of the pairwise markers combinations within each linkage group. After that, we obtain the recombination fraction matrices for all groups and use the MDS algorithm to order the markers.
 
 
+```r
+P<-lapply(LGS, make_pairs_mappoly, input.twopt = all.pairs)
+LGS.filt<-lapply(P, rf_snp_filter, thresh.LOD.ph = 5, 
+                 thresh.LOD.rf = 5, thresh.rf = 0.15, 
+                 thresh.perc = 0.10)
+P.filt<-lapply(LGS.filt, make_pairs_mappoly, input.twopt = all.pairs)
+M.filt<-lapply(P.filt, rf_list_to_matrix)
+```
+
 ```
 ## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.
 ## INFO: Going singlemode. Using one CPU.
+```
+
+```r
+cl <- parallel::makeCluster(5)
+parallel::clusterEvalQ(cl, require(mappoly))
 ```
 
 ```
@@ -284,6 +298,14 @@ Next, we use the function `rf_snp_filter` to remove markers that do not meet a L
 ## 
 ## [[5]]
 ## [1] TRUE
+```
+
+```r
+MDS.ord <- parallel::parLapply(cl,
+                               M.filt,
+                               mds_mappoly)
+parallel::stopCluster(cl)
+MDS.seq<-lapply(MDS.ord, make_seq_mappoly)
 ```
 
 Now, let us plot the reordered recombination fraction 

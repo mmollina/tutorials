@@ -133,7 +133,7 @@ LGS<-lapply(c(1,2,4,5,6), function(x, lgs) make_seq_mappoly(lgs, x), lgs)
 
 Next, we use the function `rf_snp_filter` to remove markers that do not meet a LOD and recombination fraction criteria for at least 10% of the pairwise markers combinations within each linkage group. After that, we obtain the recombination fraction matrices for all groups and use the MDS algorithm to order the markers.
 
-```{r mds, echo=FALSE, eval=TRUE}
+```{r mds, echo=TRUE, eval=TRUE}
 P<-lapply(LGS, make_pairs_mappoly, input.twopt = all.pairs)
 LGS.filt<-lapply(P, rf_snp_filter, thresh.LOD.ph = 5, 
                  thresh.LOD.rf = 5, thresh.rf = 0.15, 
