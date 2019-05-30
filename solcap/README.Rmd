@@ -41,6 +41,7 @@ Here we assume that the genotypic data is available and in the format required b
 ```R
 install.packages("devtools")
 ```
+
 To install `mappoly` from Git Hub use
 
 ```R
@@ -69,7 +70,8 @@ Now, let us read the data set using the function `read_geno_dist`.
 
 ```{r load_data, eval=TRUE}
 #(~46 seconds)
-dat.pot<-read_geno_dist(file.in = "SolCAP", prob.thres = 0.9)
+file.in<-system.file('extdata', 'SolCAP.bz2', package = 'mappoly')
+dat.pot<-read_geno_dist(file.in = file.in, prob.thres = 0.9)
 ```
 
 The loaded data set contains 4017 markers and 160 individuals. Notice that the program performed some filtering, eliminating non-informative markers (monomorphic) and also computed the p-value associated to the chi-square test for the expected segregation patterns under Mendelian inheritance for all markers. To inspect the data set, we just type

@@ -8,6 +8,11 @@ src/*.so
 src/*.dll
 docs/*.rda
 docs/*.rdb
+potato/*.rda
+potato/*.rdb
+potato/*.rds
+potato/*.RData
+potato/README_cache/
 solcap_example_cache/
 solcap_example_files/
 polymapR_example_cache/
