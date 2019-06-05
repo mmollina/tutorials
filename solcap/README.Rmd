@@ -41,7 +41,6 @@ Here we assume that the genotypic data is available and in the format required b
 ```R
 install.packages("devtools")
 ```
-
 To install `mappoly` from Git Hub use
 
 ```R
@@ -70,8 +69,8 @@ Now, let us read the data set using the function `read_geno_dist`.
 
 ```{r load_data, eval=TRUE}
 #(~46 seconds)
-file.in<-system.file('extdata', 'SolCAP.bz2', package = 'mappoly')
-dat.pot<-read_geno_dist(file.in = file.in, prob.thres = 0.9)
+solcap.file <- system.file('extdata', 'SolCAP.bz2', package = 'mappoly')
+dat.pot<-read_geno_dist(file.in = "SolCAP", prob.thres = 0.9)
 ```
 
 The loaded data set contains 4017 markers and 160 individuals. Notice that the program performed some filtering, eliminating non-informative markers (monomorphic) and also computed the p-value associated to the chi-square test for the expected segregation patterns under Mendelian inheritance for all markers. To inspect the data set, we just type
@@ -175,7 +174,7 @@ mat <- rf_list_to_matrix(input.twopt = all.rf.pairwise)
 
 We can plot this matrix using the reference genome order. For doing so, we use the function `get_genomic_order` to get the genomic order of the input sequence and use the resulting order to index the recombination fraction matrix. If the reference order is consistent with the marker order in this specific population, we should observe a block-diagonal matrix and within each sub-matrix, a monotonic pattern. 
 
-```{r plot_full_mat, dpi=200, eval=TRUE}
+```{r plot_full_mat, dpi=200}
 id<-get_genomic_order(seq.all.lgs)
 plot(mat, ord = rownames(id), index = FALSE)
 ```
@@ -191,7 +190,7 @@ grs <- group_mappoly(input.mat = mat,
                      input.seq = seq.all.lgs,
                      expected.groups = 12,
                      comp.mat = TRUE, 
-                     inter = TRUE)
+                     inter = FALSE)
 grs
 ```
 
@@ -217,7 +216,7 @@ for(j in 1:12){
 
 Now, let us print the recombination fraction matrices or each linkage group.
 
-```{r, all_mat_rf, eval=TRUE, echo = FALSE, results='hide'}
+```{r, all_mat_rf, eval=TRUE, echo = TRUE, results='hide'}
 op <- par(mfrow = c(3, 4), pty = "s", mar=c(1,1,1,1))
 for(i in 1:12)
   plot(rf_list_to_matrix(LGS[[i]]$tpt), ord = LGS[[i]]$lg$seq.mrk.names, 
@@ -266,8 +265,11 @@ Colored rectangles (red and blue) indicates the presence of the allelic variant 
 Since our data set contains the probability distribution for each combination of marker and offspring, we will use this information to reestimate the genetic map of linkage group 12. The use of this prior information will update the genotype of the markers based on a global chromosome structure.
 
 ```{r, map_err_lg12, eval=TRUE, results='hide'}
-lg12.map.prior<-reest_map_geno_dist(lg12.map, dat.dist = dat.pot.filt, verbose = FALSE, tol = 10e-4)
-plot(lg12.map.prior$reestimated.map)
+lg12.map.prior<-est_full_hmm_with_prior_dist(input.map = lg12.map, 
+                                             verbose = FALSE, 
+                                             tol = 10e-4)
+lg12.map.prior
+plot(lg12.map.prior)
 ```
 Notice that the resulting map is smaller than the previous and some markers were "attracted" and some markers were "repealed". We will see the effect of these changes in a future section.
 
@@ -313,7 +315,7 @@ In this figure, the x-axis represents the genetic map and the y-axis represents 
 Now, let us use the function `calc_genoprob_dist`, whcih allows the inclusion of genotype probability distribution 
 
 ```{r, genoprob_12_soft, eval = TRUE}
-genoprob.lg12.prior<-calc_genoprob_dist(input.map = lg12.map.error, dat.dist = dat.pot.filt)
+genoprob.lg12.prior<-calc_genoprob_dist(input.map = lg12.map, dat.dist = dat.pot.filt)
 ```
 
 Again, let us display the results for offspring 1
@@ -326,7 +328,7 @@ image(t(pr),
       col=RColorBrewer::brewer.pal(n=9 , name = "YlOrRd"),
       axes=FALSE,
       xlab = "Markers",
-      ylab = " ",
+      ylab = "",
       main = paste("LG", i))
 axis(side = 1, at = d/max(d),
      labels =rep("", length(d)), las=2)
@@ -425,7 +427,6 @@ In the fallowing example, we use the package `paralell` to perform the construct
 
 ```{r hmm_map, results='hide', eval = TRUE}
 ## Performing parallel computation
-#(~20 minutes)
 my.phase.func<-function(X){
   x<-est_rf_hmm_sequential(input.seq = X$lg,
                                 start.set = 10,
@@ -457,16 +458,72 @@ MAPs.err <- MAPs.prior <- vector("list", 12)
 for(i in 1:12){
   cat("LG:", i ,"\n")
    MAPs.err[[i]] <- est_full_hmm_with_global_error(input.map = MAPs[[i]], error = 0.05, tol = 10e-4, verbose = FALSE)
-   MAPs.prior[[i]] <- reest_map_geno_dist(input.map = MAPs[[i]], dat.dist = dat.pot.filt, verbose = FALSE, tol = 10e-4)
+   MAPs.prior[[i]] <- est_full_hmm_with_prior_dist(input.map = MAPs[[i]], verbose = FALSE, tol = 10e-4)
 }
 ```
 
 Plotting maps
 
-```{r print_maps, results='hide'} 
-sapply(MAPs, function(x) plot(x))
-sapply(MAPs.err, function(x) plot(x))
-sapply(MAPs.prior, function(x) plot(x$reestimated.map))
+```{r print_maps, results='hide', eval = TRUE}
+w<-NULL
+  for(i in 1:12)
+  w<-c(w, c(MAPs[i],
+            MAPs.prior[i], 
+            MAPs.err[i]))
+  names(w) <- apply(expand.grid(c("dose", "prior", "error"), paste0("LG_", 1:12), 
+                              stringsAsFactors = FALSE)[,2:1], 1, paste, 
+                  collapse = "_")
+  op <- par(cex.axis = .5)
+  plot_map_list(w, horiz = FALSE, col = rep(gg_color_hue(3), 12))
+  par(op)
+  legend("bottomright", legend = c("Dosage based", "Prior", "Error"), pch=15, col = rep(gg_color_hue(3)))
+```
+
+Now, let us plot only the map with a global error
+
+```{r plot_final_map, eval = TRUE}
+  plot_map_list(MAPs.err, horiz = FALSE, col = "ggstyle")
+```
+
+
+## Using MDS order
+
+```{r hmm_map_mds, results='hide', eval = TRUE}
+## Performing parallel computation
+system.time({
+  cl <- parallel::makeCluster(12)
+  parallel::clusterEvalQ(cl, require(mappoly))
+  parallel::clusterExport(cl, "dat.pot.filt")
+  MAPs.mds <- parallel::parLapply(cl,LGS.mds,my.phase.func)
+  parallel::stopCluster(cl)
+})
+```
+
+Now let us incude prior information
+
+```{r all_maps_error_mds, results='hide', eval = TRUE}
+MAPs.mds.err <- MAPs.mds.prior <- vector("list", 12)
+for(i in 1:12){
+  cat("LG:", i ,"\n")
+   MAPs.mds.err[[i]] <- est_full_hmm_with_global_error(input.map = MAPs.mds[[i]], error = 0.05, tol = 10e-4, verbose = FALSE)
+   MAPs.mds.prior[[i]] <- est_full_hmm_with_prior_dist(input.map = MAPs.mds[[i]], verbose = FALSE, tol = 10e-4)
+}
+```
+
+Plotting maps
+```{r print_maps_mds, results='hide', eval = TRUE}
+w<-NULL
+  for(i in 1:12)
+  w<-c(w, c(MAPs.mds[i],
+            MAPs.mds.prior[i], 
+            MAPs.mds.err[i]))
+  names(w) <- apply(expand.grid(c("dose", "prior", "error"), paste0("LG_", 1:12), 
+                              stringsAsFactors = FALSE)[,2:1], 1, paste, 
+                  collapse = "_")
+  op <- par(cex.axis = .5)
+  plot_map_list(w, horiz = FALSE, col = rep(gg_color_hue(3), 12))
+  par(op)
+  legend("bottomright", legend = c("Dosage based", "Prior", "Error"), pch=15, col = rep(gg_color_hue(3)))
 ```
 
 # Genotype conditional probabilities
@@ -475,19 +532,21 @@ In order to use the genetic map in QTL, we need to obtain the conditional probab
 
 
 ```{r genoprob_2, eval=TRUE, results='hide'}
-genoprob.err <- vector("list", 12)
+genoprob.prior <- vector("list", 12)
 for(i in 1:12)
-genoprob.err[[i]] <- calc_genoprob_dist(input.map = MAPs.err[[i]], dat.dist = dat.pot.filt)
+genoprob.prior[[i]] <- calc_genoprob_dist(input.map = MAPs.prior[[i]], dat.dist =dat.pot.filt)
 ```
 
 
 ```{r plot_genoprob_all, eval = TRUE}
 ind <- 2
-op <- par(mfrow = c(3, 4), mar=c(1,1,1,1))
+dg <- sapply(genoprob.prior, function (x) max(x$map))
+dg <- dg/max(dg)
+layout(matrix(1:12, ncol = 4), widths = dg)
 for(i in 1:12)
 {
-  d <- genoprob.err[[i]]$map
-  image(t(genoprob.err[[i]]$probs[,,ind]),
+  d <- genoprob.prior[[i]]$map
+  image(t(genoprob.prior[[i]]$probs[,,ind]),
         col=RColorBrewer::brewer.pal(n=9 , name = "YlOrRd"),
         axes=FALSE,
         xlab = "Markers",
@@ -496,24 +555,11 @@ for(i in 1:12)
   axis(side = 1, at = d/max(d),
        labels =rep("", length(d)), las=2)
 }
-par(op)
 ```
-
-# Preparing data to display offspring haplotypes
-
-```{r}
-require(mappoly)
-genoprob.ls <- genoprob.err
-saveRDS(genoprob.ls, file = "genoprob_list.rds")
-final.map<-MAPs.err
-saveRDS(final.map, file = "final.map.rds")
-saveRDS(dat.pot.filt, file = "input.data.rds")
-```
-
 
 
 ```{r save, eval=FALSE, echo=FALSE, include=FALSE, eval=TRUE}
-save.image(file = "all_data_after_analysis.rda", compress = TRUE)
+save.image(file = "maps.rda", compress = TRUE)
 ```
 
 # References

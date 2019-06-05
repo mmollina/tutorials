@@ -1,0 +1,12 @@
+name: offspring_haplotype_BT_population
+title: offspring_haplotype_BT_population
+username:
+account: gt4sp-genetic-map
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 661461
+bundleId: 1901236
+url: https://gt4sp-genetic-map.shinyapps.io/offspring_haplotype_BT_population/
+when: 1551201281.09671
+asMultiple: FALSE
+asStatic: FALSE

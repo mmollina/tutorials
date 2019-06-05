@@ -1,8 +1,10 @@
 .Rproj.user
 .Rhistory
-.RData
+*.RData
 .Ruserdata
 *.rda
+*.rds
+*.rdb
 src/*.o
 src/*.so
 src/*.dll
@@ -17,3 +19,8 @@ solcap_example_cache/
 solcap_example_files/
 polymapR_example_cache/
 polymapR_example_files/
+solcap/*.rda
+solcap/*.rdb
+solcap/*.rds
+solcap/*.RData
+solcap/README_cache/
