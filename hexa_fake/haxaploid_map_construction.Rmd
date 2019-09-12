@@ -6,7 +6,6 @@ output:
   html_document:
     highlight: pygments
     keep_md: yes
-    theme: flatly
     toc: yes
     toc_depth: '3'
     toc_float:
